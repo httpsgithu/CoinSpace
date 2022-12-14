@@ -40,7 +40,7 @@
     "delay": "^5.0.0",
     "ejs": "^2.6.1",
     "elliptic": "^6.5.3",
-    "express": "^4.15.4",
+    "express": "^4.17.3",
     "express-openapi-validator": "^4.13.1",
     "helmet": "^3.21.0",
     "http-errors": "^1.8.0",
