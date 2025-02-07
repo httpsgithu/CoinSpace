@@ -1,24 +1,17 @@
 import bodyParser from 'body-parser';
-import compress from 'compression';
+import cors from 'cors';
+import crypto from 'crypto';
+import express from 'express';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
-import express from 'express';
-import cors from 'cors';
-import axios from 'axios';
-import querystring from 'querystring';
-import crypto from 'crypto';
 
 function init(app) {
 
   app.use(requireHTTPS);
   app.set('trust proxy', true);
-
-  if (isProduction()) {
-    app.use(helmet.xssFilter());
-    app.use(helmet.noSniff());
-    app.use(helmet.frameguard({ action: 'sameorigin' }));
-  }
-
+  app.use(helmet.xssFilter());
+  app.use(helmet.noSniff());
+  app.use(helmet.hidePoweredBy());
   app.use(cors());
 
   const dayInMs = 24 * 60 * 60 * 1000;
@@ -33,34 +26,10 @@ function init(app) {
     },
   }));
 
-  app.use(compress());
-
-  app.use('/api/', (req, res, next) => {
-    const id = req.query.id || req.body.deviceId || req.body.id || req.body.wallet_id;
-    if (!id || !/^[a-f0-9]{64}$/.test(id)) return next();
-    const [, app, store, version] = req.get('X-Release') !== undefined ?
-      req.get('X-Release').match(/(.+)\.(.+)@(.+)/i) || [] : [];
-    const screen = req.baseUrl + req.path + (req.query.crypto ? `/${req.query.crypto}` : '')
-      + (req.query.network ? `/${req.query.network}` : '');
-    const useragent = req.get('User-Agent');
-    const language = req.acceptsLanguages()[0];
-    next();
-    axios({
-      url: 'https://www.google-analytics.com/collect',
-      method: 'post',
-      data: querystring.stringify({
-        v: 1, t: 'screenview',
-        tid: process.env.ANALYTICS_ID,
-        aip: 1, uid: id,
-        dl: screen, dt: screen, cd: screen,
-        uip: req.ip, ua: useragent, ul: language,
-        an: app, av: version, aiid: store,
-      }),
-    }).catch(() => {});
-  });
-
   const cacheControl = isProduction() ? { maxAge: dayInMs, setHeaders: setCustomCacheControl } : null;
-  app.use(express.static(fileURLToPath(new URL('../build', import.meta.url), cacheControl)));
+  app.use(express.static(fileURLToPath(new URL('dist', import.meta.url)), cacheControl));
+  app.use('/assets/crypto/',
+    express.static(fileURLToPath(new URL('node_modules/@coinspace/crypto-db/logo', import.meta.url)), cacheControl));
 }
 
 function setCustomCacheControl(res, path) {
@@ -70,8 +39,8 @@ function setCustomCacheControl(res, path) {
 }
 
 function requireHTTPS(req, res, next) {
-  const herokuForwardedFromHTTPS = req.headers['x-forwarded-proto'] === 'https';
-  if (!herokuForwardedFromHTTPS && !isOnionDomain(req) && isProduction()) {
+  const forwardedFromHTTPS = req.headers['x-forwarded-proto'] === 'https';
+  if (!forwardedFromHTTPS && isProduction()) {
     return res.redirect('https://' + req.get('host') + req.url);
   }
   next();
@@ -79,10 +48,6 @@ function requireHTTPS(req, res, next) {
 
 function isProduction() {
   return process.env.NODE_ENV === 'production';
-}
-
-function isOnionDomain(req) {
-  return req.hostname === process.env.DOMAIN_ONION;
 }
 
 export default {

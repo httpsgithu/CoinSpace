@@ -27,39 +27,7 @@
     <icon src="../images/android/icons/96.png" density="xhdpi"/>
     <icon src="../images/android/icons/144.png" density="xxhdpi"/>
     <icon src="../images/android/icons/192.png" density="xxxhdpi"/>
-    <splash src="../images/android/screens/ldpi-land.png" density="land-ldpi"/>
-    <splash src="../images/android/screens/mdpi-land.png" density="land-mdpi"/>
-    <splash src="../images/android/screens/hdpi-land.png" density="land-hdpi"/>
-    <splash src="../images/android/screens/xhdpi-land.png" density="land-xhdpi"/>
-    <splash src="../images/android/screens/xxhdpi-land.png" density="land-xxhdpi"/>
-    <splash src="../images/android/screens/xxxhdpi-land.png" density="land-xxxhdpi"/>
-    <splash src="../images/android/screens/ldpi-port.png" density="port-ldpi"/>
-    <splash src="../images/android/screens/mdpi-port.png" density="port-mdpi"/>
-    <splash src="../images/android/screens/hdpi-port.png" density="port-hdpi"/>
-    <splash src="../images/android/screens/xhdpi-port.png" density="port-xhdpi"/>
-    <splash src="../images/android/screens/xxhdpi-port.png" density="port-xxhdpi"/>
-    <splash src="../images/android/screens/xxxhdpi-port.png" density="port-xxxhdpi"/>
-    <splash src="../images/android/screens/ldpi-port.png" density="ldpi"/>
-    <splash src="../images/android/screens/mdpi-port.png" density="mdpi"/>
-    <splash src="../images/android/screens/hdpi-port.png" density="hdpi"/>
-    <splash src="../images/android/screens/xhdpi-port.png" density="xhdpi"/>
-    <splash src="../images/android/screens/xxhdpi-port.png" density="xxhdpi"/>
-    <splash src="../images/android/screens/xxxhdpi-port.png" density="xxxhdpi"/>
-    <custom-config-file target="AndroidManifest.xml" parent="/*" mode="replace">
-      <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-      <uses-feature android:name="android.hardware.camera" android:required="false" />
-      <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    </custom-config-file>
-    <preference name="SplashMaintainAspectRatio" value="true" />
-    <preference name="AndroidLaunchMode" value="singleTask"/>
-    <preference name="CustomURLSchemePluginClearsAndroidIntent" value="true"/>
     <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="bitcoin"/>
-      </intent-filter>
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
@@ -70,7 +38,31 @@
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="bitcoinsv"/>
+        <data android:scheme="bitcoin"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="cardano"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="dash"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="dogecoin"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="eos"/>
       </intent-filter>
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
@@ -88,7 +80,13 @@
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="ripple"/>
+        <data android:scheme="monero"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="solana"/>
       </intent-filter>
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
@@ -100,27 +98,16 @@
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="eos"/>
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="dogecoin"/>
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="dash"/>
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="monero"/>
+        <data android:scheme="ripple"/>
       </intent-filter>
     </config-file>
+    <preference name="AndroidLaunchMode" value="singleTask"/>
+    <preference name="AndroidXEnabled" value="true" />
+    <preference name="android-minSdkVersion" value="22" />
+    <preference name="android-targetSdkVersion" value="34" />
+    <preference name="CustomURLSchemePluginClearsAndroidIntent" value="true"/>
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="../images/android/splashscreen.xml" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#2C3832" />
   </platform>
   <platform name="ios">
     <icon src="../images/ios/icons/icon-20.png" width="20" height="20" />
@@ -159,8 +146,8 @@
     <edit-config target="NSLocationWhenInUseUsageDescription" file="Coin/Coin-Info.plist" mode="merge">
       <string>Turn on location services to send or receive coins with people around you.</string>
     </edit-config>
-    <edit-config target="NSCameraUsageDescription" file="Coin/Coin-Info.plist" mode="merge">
-      <string>This app uses the camera to scan barcodes and take pictures.</string>
+    <edit-config target="NSLocationAlwaysAndWhenInUseUsageDescription" file="Coin/Coin-Info.plist" mode="merge">
+      <string>Turn on location services to send or receive coins with people around you.</string>
     </edit-config>
     <edit-config target="UIStatusBarHidden" file="Coin/Coin-Info.plist" mode="overwrite">
       <true/>
@@ -179,7 +166,7 @@
           <key>UIApplicationShortcutItemTitle</key>
           <string>Bitcoin</string>
           <key>UIApplicationShortcutItemType</key>
-          <string>com.coinspace.wallet.bitcoin</string>
+          <string>com.coinspace.wallet.bitcoin@bitcoin</string>
         </dict>
         <dict>
           <key>UIApplicationShortcutItemIconFile</key>
@@ -187,7 +174,7 @@
           <key>UIApplicationShortcutItemTitle</key>
           <string>Dogecoin</string>
           <key>UIApplicationShortcutItemType</key>
-          <string>com.coinspace.wallet.dogecoin</string>
+          <string>com.coinspace.wallet.dogecoin@dogecoin</string>
         </dict>
         <dict>
           <key>UIApplicationShortcutItemIconFile</key>
@@ -195,7 +182,7 @@
           <key>UIApplicationShortcutItemTitle</key>
           <string>Ethereum</string>
           <key>UIApplicationShortcutItemType</key>
-          <string>com.coinspace.wallet.ethereum</string>
+          <string>com.coinspace.wallet.ethereum@ethereum</string>
         </dict>
         <dict>
           <key>UIApplicationShortcutItemIconFile</key>
@@ -203,7 +190,7 @@
           <key>UIApplicationShortcutItemTitle</key>
           <string>Litecoin</string>
           <key>UIApplicationShortcutItemType</key>
-          <string>com.coinspace.wallet.litecoin</string>
+          <string>com.coinspace.wallet.litecoin@litecoin</string>
         </dict>
       </array>
     </edit-config>
@@ -217,12 +204,11 @@
         <string>applinks:coin.space</string>
       </array>
     </edit-config>
+    <preference name="KeyboardDisplayRequiresUserAction" value="false" />
+    <preference name="SwiftVersion" value="5.0" />
   </platform>
   <preference name="AutoHideSplashScreen" value="false" />
   <preference name="StatusBarBackgroundColor" value="#FFFFFF" />
-  <preference name="android-minSdkVersion" value="22" />
-  <preference name="android-targetSdkVersion" value="30" />
-  <preference name="KeyboardDisplayRequiresUserAction" value="false" />
   <preference name="DisallowOverscroll" value="true"/>
   <preference name="scheme" value="app" />
   <preference name="hostname" value="localhost" />

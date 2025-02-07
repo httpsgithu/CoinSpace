@@ -1,36 +1,36 @@
-'use strict';
+import log from 'electron-log';
+import { app, autoUpdater, dialog } from 'electron';
 
-const { app, autoUpdater, dialog } = require('electron');
-const log = require('electron-log');
+import {
+  VITE_DISTRIBUTION,
+  VITE_SITE_URL,
+  isDevelopment,
+} from './constants.js';
 
-const supportedDistribution = ['mac', 'win'];
-const {
-  SITE_URL,
-  BUILD_PLATFORM,
-} = process.env;
+const supportedDistribution = ['mac'];
 
 class Updater {
   constructor() {
     this.state = 'update-not-available';
     this.supported = false;
 
-    if (!supportedDistribution.includes(BUILD_PLATFORM)) {
-      log.log(`Electron's auto updater does not support the '${BUILD_PLATFORM}' distribution`);
+    if (!supportedDistribution.includes(VITE_DISTRIBUTION)) {
+      log.info(`Electron's auto updater does not support the '${VITE_DISTRIBUTION}' distribution`);
       return this;
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      log.log('Electron\'s auto updater must be used in production environment');
+    if (isDevelopment) {
+      log.info('Electron\'s auto updater must be used in production environment');
       return this;
     }
 
-    const feedURL = `${SITE_URL}api/v1/update/${BUILD_PLATFORM}/${process.arch}/${app.getVersion()}`;
+    const feedURL = `${VITE_SITE_URL}api/v4/update/${VITE_DISTRIBUTION}/${process.arch}/v${app.getVersion()}`;
     const requestHeaders = {
-      'User-Agent': `CoinSpace/${BUILD_PLATFORM}/${app.getVersion()} (${process.platform}: ${process.arch})`,
+      'User-Agent': `CoinSpace/${VITE_DISTRIBUTION}/${app.getVersion()} (${process.platform}: ${process.arch})`,
     };
 
-    log.log('feedURL:', feedURL);
-    log.log('requestHeaders:', requestHeaders);
+    log.info('feedURL:', feedURL);
+    log.info('requestHeaders:', requestHeaders);
 
     try {
       autoUpdater.setFeedURL(feedURL, requestHeaders);
@@ -48,23 +48,23 @@ class Updater {
 
     autoUpdater.on('checking-for-update', () => {
       this.state = 'checking-for-update';
-      log.log('checking-for-update');
+      log.info('checking-for-update');
     });
 
     autoUpdater.on('update-available', () => {
       this.state = 'update-available';
-      log.log('update-available; downloading...');
+      log.info('update-available; downloading...');
     });
 
     autoUpdater.on('update-not-available', () => {
       this.state = 'update-not-available';
-      log.log('update-not-available');
+      log.info('update-not-available');
     });
 
 
     autoUpdater.on('update-downloaded', async (event, releaseNotes, releaseName, releaseDate, updateURL) => {
       this.state = 'update-downloaded';
-      log.log('update-downloaded:', {
+      log.info('update-downloaded:', {
         event,
         releaseNotes,
         releaseName,
@@ -102,7 +102,7 @@ class Updater {
 
   checkForUpdates() {
     if (['checking-for-update', 'update-available', 'update-downloaded'].includes(this.state)) {
-      log.log(`already checked: ${this.state}`);
+      log.info(`already checked: ${this.state}`);
       return;
     }
     autoUpdater.checkForUpdates();
@@ -137,4 +137,4 @@ class Updater {
   }
 }
 
-module.exports = new Updater();
+export default new Updater();

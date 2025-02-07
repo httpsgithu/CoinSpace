@@ -1,9 +1,12 @@
-'use strict';
+import { Menu, app, shell } from 'electron';
 
-const { app, shell } = require('electron');
-const openWindow = require('./openWindow');
-const { isDevelopment, isMac } = require('./constants');
-const updater = require('./updater');
+import openWindow from './openWindow.js';
+import updater from './updater.js';
+import {
+  isDevelopment,
+  isMac,
+  prettyVersion,
+} from './constants.js';
 
 const updateMenu = {
   get label() {
@@ -30,19 +33,23 @@ const updateMenu = {
   },
 };
 
+// eslint-disable-next-line max-len
+const FAQ = `https://support.coin.space/hc/en-us/sections/115000511287-FAQ?tf_24464158=${encodeURIComponent(prettyVersion)}`;
+const SUPPORT = `https://support.coin.space/hc/en-us?tf_24464158=${encodeURIComponent(prettyVersion)}`;
+
 const helpMenu = {
   role: 'help',
   submenu: [
     {
       label: 'FAQ',
       click: async () => {
-        await shell.openExternal('https://support.coin.space/hc/en-us/sections/115000511287-FAQ');
+        await shell.openExternal(FAQ);
       },
     },
     {
       label: 'Support',
       click: async () => {
-        await shell.openExternal('https://support.coin.space/hc/en-us');
+        await shell.openExternal(SUPPORT);
       },
     },
     ...(!isMac ? [
@@ -50,7 +57,6 @@ const helpMenu = {
       {
         role: 'about',
         click: async () => {
-          // TODO set icon
           await app.showAboutPanel();
         },
       },
@@ -127,4 +133,4 @@ const template = [
   helpMenu,
 ];
 
-module.exports = template;
+export default Menu.buildFromTemplate(template);

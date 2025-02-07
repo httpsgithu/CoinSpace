@@ -1,5 +1,6 @@
-import crypto from 'crypto';
+import Big from 'big.js';
 import createError from 'http-errors';
+import crypto from 'crypto';
 import elliptic from 'elliptic';
 const EdDSA = elliptic.eddsa;
 
@@ -49,8 +50,19 @@ export function verifyReq(key, req) {
 
 export function mapAuthenticator(authenticator) {
   return {
-    id: authenticator.credentialID,
+    id: Buffer.from(authenticator.credentialID, 'base64url'),
     type: 'public-key',
     transports: authenticator.transports || undefined,
   };
+}
+
+export function normalizeNumber(n, decimals) {
+  return Big(n).round(decimals ?? 8).toFixed();
+}
+
+export function getUserId(walletId, salt) {
+  return crypto
+    .createHmac('sha256', salt)
+    .update(walletId)
+    .digest('hex');
 }

@@ -1,22 +1,8 @@
+import Big from 'big.js';
 import createError from 'http-errors';
 import db from './db.js';
-import Big from 'big.js';
-
-const CRYPTO = [
-  'bitcoin@bitcoin',
-  'bitcoin-cash@bitcoin-cash',
-  'bitcoin-sv@bitcoin-sv',
-  'litecoin@litecoin',
-  'dogecoin@dogecoin',
-  'dash@dash',
-  'monero@monero',
-];
 
 async function getCsFee(cryptoId) {
-  if (!CRYPTO.includes(cryptoId)) {
-    throw createError(400, 'Currency cs fee is not supported');
-  }
-
   const ticker = await db.collection('cryptos')
     .findOne({
       _id: cryptoId,
@@ -46,6 +32,33 @@ async function getCsFee(cryptoId) {
   };
 }
 
+async function getCsFeeV4(cryptoId) {
+  const csFee = await db.collection('cs_fee')
+    .findOne({ _id: cryptoId });
+  if (!csFee) {
+    throw createError(404, 'CS fee was not found');
+  }
+  return {
+    fee: csFee.fee,
+    minFee: csFee.min_usd,
+    maxFee: csFee.max_usd,
+    rbfFee: csFee.rbf_usd,
+    address: csFee.addresses[0],
+    feeAddition: csFee.fee_addition || 0,
+  };
+}
+
+async function getCsFeeAddressesV4(cryptoId) {
+  const csFee = await db.collection('cs_fee')
+    .findOne({ _id: cryptoId });
+  if (!csFee) {
+    throw createError(404, 'CS fee was not found');
+  }
+  return csFee.addresses;
+}
+
 export default {
   getCsFee,
+  getCsFeeV4,
+  getCsFeeAddressesV4,
 };

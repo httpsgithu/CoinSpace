@@ -1,34 +1,35 @@
-'use strict';
+import { fileURLToPath } from 'node:url';
+import { init } from '@sentry/electron';
+import log from 'electron-log';
+import { Menu, app, ipcMain, net, protocol } from 'electron';
 
-// Assign env variables
-Object.assign(process.env, require('./app/env.json'));
+import menu from './lib/menu.js';
+import openWindow from './lib/openWindow.js';
+import schemes from './dist/schemes.js';
+import updater from './lib/updater.js';
+import {
+  APP_HOSTNAME,
+  VITE_GOOGLE_API_KEY,
+  VITE_SENTRY_DSN,
+  VITE_SENTRY_ENVIRONMENT,
+  VITE_SITE_URL,
+  isDevelopment,
+  isLinux,
+  isMac,
+  isMas,
+  isWindows,
+  release,
+} from './lib/constants.js';
 
-// Modules to control application life and create native browser window
-const path = require('path');
-const { app, Menu, protocol } = require('electron');
-const log = require('electron-log');
-const pkg = require('./package.json');
-const { isMac, isMas, isWindows, isLinux } = require('./lib/constants');
-const menuTemplate = require('./lib/menu');
-const openWindow = require('./lib/openWindow');
-const Sentry = require('@sentry/electron');
-const schemes = require('./lib/schemes');
-const updater = require('./lib/updater');
-
-if (process.env.NODE_ENV === 'production') {
+log.initialize({ spyRendererConsole: true });
+if (!isDevelopment) {
   log.transports.file.level = false;
 }
-
-log.log('versions', process.versions);
-
-if (require('electron-squirrel-startup')) return;
-
-// Suppress deprecation warning
-app.allowRendererProcessReuse = true;
+log.info('versions', process.versions);
 
 if (isWindows) {
   app.setAboutPanelOptions({
-    iconPath: path.join(__dirname, 'resources/64x64.png'),
+    iconPath: fileURLToPath(new URL('./resources/64x64.png', import.meta.url)),
   });
 }
 
@@ -36,8 +37,8 @@ if (isLinux) {
   app.setAboutPanelOptions({
     applicationName: app.name,
     applicationVersion: app.getVersion(),
-    website: pkg.homepage,
-    iconPath: path.join(__dirname, 'resources/64x64.png'),
+    website: VITE_SITE_URL,
+    iconPath: fileURLToPath(new URL('./resources/64x64.png', import.meta.url)),
   });
 }
 
@@ -47,23 +48,23 @@ const lock = app.requestSingleInstanceLock();
 // https://github.com/electron/electron/issues/15958
 if (!isMas && !lock) {
   app.quit();
-  return;
+  //return;
 }
 
 // Init crashReporter
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.SENTRY_ENVIRONMENT,
-  release: process.env.RELEASE,
+init({
+  dsn: VITE_SENTRY_DSN,
+  environment: VITE_SENTRY_ENVIRONMENT,
+  release,
 });
 
 // Set up Application Menu
-const menu = Menu.buildFromTemplate(menuTemplate);
 Menu.setApplicationMenu(menu);
 
-schemes.forEach((item) => {
+[...schemes, { scheme: 'coinspace' }].forEach((item) => {
   if (!app.isDefaultProtocolClient(item.scheme)) {
-    // Define custom protocol handler. Deep linking works on packaged versions of the application!
+    // Define custom protocol handler.
+    // Deep linking works on packaged versions of the application!
     app.setAsDefaultProtocolClient(item.scheme);
   }
 });
@@ -87,23 +88,61 @@ function extractUrlFromArgv(argv) {
   });
 }
 
+function shouldHandlePathname(pathname) {
+  if (pathname.startsWith('/api/')) return false;
+  if (pathname.startsWith('/assets/crypto/')) return false;
+  return true;
+}
+
 // Someone tried to run a second instance
 app.on('second-instance', (event, argv) => {
   openWindow(extractUrlFromArgv(argv));
+});
+
+// Quit when all windows are closed.
+app.on('window-all-closed', () => {
+  // On macOS it is common for applications and their menu bar
+  // to stay active until the user quits explicitly with Cmd + Q
+  if (!isMac) {
+    app.quit();
+  }
 });
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  log.log('app ready');
-  protocol.registerStringProtocol('coinspace', (request/*, cb*/) => {
-    openWindow(request.url);
-    // no calback due to bug
-    // https://github.com/electron/electron/issues/28407
-    // https://github.com/electron/electron/issues/28579
-    //cb('ok');
+  log.info('app ready');
+
+  ipcMain.handle('geolocation', async (event, options) => {
+    const res = await fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${VITE_GOOGLE_API_KEY}`, {
+      method: 'post',
+      signal: AbortSignal.timeout(options?.timeout || 30 * 1000),
+    });
+    const data = await res.json();
+    if (data?.location?.lat !== undefined && data?.location?.lng !== undefined) {
+      return {
+        coords: {
+          latitude: data.location.lat,
+          longitude: data.location.lng,
+          accuracy: data.accuracy,
+        },
+      };
+    } else {
+      throw new Error(`Wrong location data: ${data}`);
+    }
   });
+
+  // handle local files
+  protocol.handle('https', (req) => {
+    const { host, pathname } = new URL(req.url);
+    if (host === APP_HOSTNAME && shouldHandlePathname(pathname)) {
+      const url = new URL(`dist${pathname === '/' ? '/index.html' : pathname}`, import.meta.url);
+      return net.fetch(url);
+    }
+    return net.fetch(req, { bypassCustomProtocolHandlers: true });
+  });
+
   if (isMac) {
     openWindow(startupUrl);
   } else {
@@ -117,13 +156,4 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     openWindow();
   });
-});
-
-// Quit when all windows are closed.
-app.on('window-all-closed', () => {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
 });

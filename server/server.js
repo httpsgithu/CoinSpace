@@ -1,12 +1,13 @@
-import express from 'express';
-import Sentry from '@sentry/node';
 import Integrations from '@sentry/integrations';
-import middleware from './middleware.js';
+import Sentry from '@sentry/node';
+import express from 'express';
 import { isHttpError } from 'http-errors';
+import middleware from './middleware.js';
 
 import apiV1 from './lib/v1/api.js';
 import apiV2 from './lib/v2/api.js';
 import apiV3 from './lib/v3/api.js';
+import apiV4 from './lib/v4/api.js';
 
 const app = express();
 
@@ -28,14 +29,35 @@ middleware.init(app);
 app.use('/api/v1', apiV1);
 app.use('/api/v2', apiV2);
 app.use('/api/v3', apiV3);
-app.set('views', './server/views');
+app.use('/api/v4', apiV4);
+app.set('views', './views');
 app.set('view engine', 'ejs');
+
+if (process.env.IS_TOR !== 'true') {
+  app.get('/.well-known/webauthn', (req, res) => {
+    return res.json({
+      origins: [
+        new URL(process.env.SITE_URL).origin,
+        new URL(process.env.SITE_URL_TOR).origin,
+      ],
+    });
+  });
+}
+
+app.get('*', (req, res, next) => {
+  if (isAssetsPath(req.path)) return next();
+  res.sendFile('index.html', { root: './dist/' });
+});
+
+function isAssetsPath(path) {
+  return path.match(/\/assets\//);
+}
 
 app.use(Sentry.Handlers.errorHandler());
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err.stack || err.message || err);
+  console.log(err.stack || err.message || err);
   const status = err.status || 500;
 
   res.status(status);

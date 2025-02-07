@@ -1,40 +1,47 @@
-'use strict';
-
-const setLanguages = require('electron-packager-languages');
-const pkg = require('./package.json');
-const languages = require('../app/lib/i18n/list.json');
-const appxmanifest = require('./support/appxmanifest');
+import appxmanifest from './support/appxmanifest.js';
+import fs from 'node:fs/promises';
+import setLanguages from 'electron-packager-languages';
 const schemes = [
   'coinspace',
-  ...require('./lib/schemes').map((item) => item.scheme),
+  ...(await import('./dist/schemes.js')).default.map((item) => item.scheme),
 ];
+import { languages } from '../web/src/lib/i18n/languages.js';
+const pkg = JSON.parse(await fs.readFile('./package.json'));
 
-const { BUILD_PLATFORM } = process.env;
+const { VITE_DISTRIBUTION } = process.env;
 const BRANCH = process.env.GITHUB_REF && process.env.GITHUB_REF.replace('refs/heads/', '');
 
-if (!['win', 'appx', 'appx-dev', 'mac', 'mas', 'mas-dev', 'snap'].includes(BUILD_PLATFORM)) {
-  throw new Error(`Please specify valid distribution, provided: '${BUILD_PLATFORM}'`);
+if (!['appx', 'appx-dev', 'mac', 'mas', 'mas-dev', 'snap'].includes(VITE_DISTRIBUTION)) {
+  throw new Error(`Unsupported distribution: '${VITE_DISTRIBUTION}'`);
 }
 
 let buildVersion = pkg.version;
 
-if (BUILD_PLATFORM === 'mas' && process.env.GITHUB_RUN_NUMBER) {
+if (VITE_DISTRIBUTION === 'mas' && process.env.GITHUB_RUN_NUMBER) {
   buildVersion = `1.1.${process.env.GITHUB_RUN_NUMBER}`;
 }
 
-module.exports = {
+const appxVersion = `${pkg.version}.${VITE_DISTRIBUTION === 'appx' ? '0' : (process.env.GITHUB_RUN_NUMBER || '0')}`;
+
+const protocols = {
+  name: pkg.productName,
+  schemes,
+};
+const appxPackageName = VITE_DISTRIBUTION === 'appx' ? 'CoinWallet' : 'CoinWalletDev';
+
+export default {
   packagerConfig: {
     appVersion: pkg.version,
     buildVersion,
     //asar: true,
     icon: 'resources/icon',
-    executableName: ['win', 'appx', 'appx-dev'].includes(BUILD_PLATFORM) ? pkg.productName : pkg.name,
+    executableName: ['appx', 'appx-dev'].includes(VITE_DISTRIBUTION) ? pkg.productName : pkg.executableName,
     ignore: [
       /README.md/i,
       /HISTORY.md/i,
       /CHANGELOG.md/i,
-      '^/(?!electron.js|env.json|package.json|lib|app|resources|node_modules)',
-      ['win', 'appx', 'appx-dev', 'snap'].includes(BUILD_PLATFORM) ? '^/resources/(?!64x64.png)' : '^/resources',
+      '^/(?!electron.js|package.json|lib|dist|resources|node_modules)',
+      ['appx', 'appx-dev', 'snap'].includes(VITE_DISTRIBUTION) ? '^/resources/(?!64x64.png)' : '^/resources',
       'Makefile',
       '.editorconfig',
       '.gitignore',
@@ -53,77 +60,83 @@ module.exports = {
     ],
     appBundleId: 'com.coinspace.wallet',
     appCategoryType: 'public.app-category.finance',
-    osxSign: {
-      'gatekeeper-assess': false,
-      identity: process.env.APPLE_IDENTITY,
-      type: BUILD_PLATFORM === 'mas-dev' ? 'development' : 'distribution',
-      ...(BUILD_PLATFORM === 'mac'? {
-        'hardened-runtime': true,
-        entitlements: 'resources/entitlements.mac.plist',
-        'entitlements-inherit': 'resources/entitlements.mac.plist',
-      } : {}),
-      ...(['mas', 'mas-dev'].includes(BUILD_PLATFORM) ? {
-        'hardened-runtime': false,
-        entitlements: 'resources/entitlements.mas.plist',
-        'entitlements-inherit': 'resources/entitlements.mas.inherit.plist',
-      } : {}),
+    extendInfo: {
+      LSMinimumSystemVersion: '11.0',
+      NSCameraUsageDescription: 'This app uses the camera to scan QR codes.',
+      ...(['mas', 'mas-dev'].includes(VITE_DISTRIBUTION) ? {} : {
+        NSLocationUsageDescription: 'Turn on location services to send or receive coins with people around you.',
+      }),
     },
-    osxNotarize: (BUILD_PLATFORM === 'mac' && process.env.APPLE_ID && process.env.APPLE_PASSWORD) ? {
+    osxSign: {
+      type: VITE_DISTRIBUTION === 'mas-dev' ? 'development' : 'distribution',
+      provisioningProfile: ['mas', 'mas-dev'].includes(VITE_DISTRIBUTION) ? 'embedded.provisionprofile' : undefined,
+      optionsForFile(filePath) {
+        if (VITE_DISTRIBUTION === 'mac') {
+          let entitlements = 'resources/entitlements.mac.plist';
+          if (filePath.includes('(Plugin).app')) {
+            entitlements = 'resources/entitlements.mac.plugin.plist';
+          } else if (filePath.includes('(GPU).app')) {
+            entitlements = 'resources/entitlements.mac.gpu.plist';
+          } else if (filePath.includes('(Renderer).app')) {
+            entitlements = 'resources/entitlements.mac.renderer.plist';
+          }
+          return {
+            hardenedRuntime: true,
+            entitlements,
+          };
+        }
+        if (['mas', 'mas-dev'].includes(VITE_DISTRIBUTION)) {
+          const entitlements = filePath.includes('.app/')
+            ? 'resources/entitlements.mas.inherit.plist'
+            : 'resources/entitlements.mas.plist';
+          return {
+            hardenedRuntime: false,
+            entitlements,
+          };
+        }
+      },
+    },
+    osxNotarize: (VITE_DISTRIBUTION === 'mac' && process.env.APPLE_ID && process.env.APPLE_PASSWORD) ? {
+      tool: 'notarytool',
       appBundleId: 'com.coinspace.wallet',
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID,
     } : undefined,
-    protocols: {
-      name: 'Coin Wallet',
-      schemes,
-    },
+    protocols,
     afterCopy: [
-      ...(['mac', 'mas', 'mas-dev'].includes(BUILD_PLATFORM) ? [setLanguages(languages.map((item) => {
-        return item.replace('-', '_').replace(/_[a-z]+/, s => s.toUpperCase());
+      ...(['mac', 'mas', 'mas-dev'].includes(VITE_DISTRIBUTION) ? [setLanguages(languages.map((lang) => {
+        return lang.value.replace('-', '_').replace(/_[a-z]+/, s => s.toUpperCase());
       }))] : []),
-      ...(['appx', 'appx-dev'].includes(BUILD_PLATFORM) ? [appxmanifest({
-        packageVersion: `${pkg.version}.0`,
-        identityName: BUILD_PLATFORM === 'appx' ? process.env.APPX_IDENTITY : pkg.name,
-        packageName: BUILD_PLATFORM === 'appx' ? 'CoinWallet' : 'CoinWalletDev',
+      ...(['appx', 'appx-dev'].includes(VITE_DISTRIBUTION) ? [appxmanifest({
+        packageVersion: appxVersion,
+        identityName: VITE_DISTRIBUTION === 'appx' ? process.env.APPX_IDENTITY : pkg.executableName,
+        packageName: appxPackageName,
         packageDescription: pkg.description,
-        packageDisplayName: process.env.APPX_PACKAGE_NAME,
-        publisherName: BUILD_PLATFORM === 'appx' ? process.env.APPX_PUBLISHER : process.env.APPX_PUBLISHER_DEV,
+        //packageDisplayName: process.env.APPX_PACKAGE_NAME,
+        packageDisplayName: pkg.productName,
+        publisherName: VITE_DISTRIBUTION === 'appx' ? process.env.APPX_PUBLISHER : process.env.APPX_PUBLISHER_DEV,
         publisherDisplayName: process.env.APPX_PUBLISHER_NAME,
         packageExecutable: `app\\${pkg.productName}.exe`,
         languages: languages.map((lang) => {
           // https://docs.microsoft.com/en-us/windows/uwp/publish/supported-languages
-          switch (lang) {
+          switch (lang.value) {
             case 'sr':
               return 'sr-Latn';
             default:
-              return lang;
+              return lang.value;
           }
         }),
-        protocols: {
-          name: 'Coin Wallet',
-          schemes,
-        },
+        protocols,
       })] : []),
     ],
   },
   makers: [
-    BUILD_PLATFORM === 'win' && {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        // App ID
-        name: 'com.coinspace.wallet',
-        setupExe: `${pkg.productName} Setup.exe`,
-        setupIcon: 'resources/icon.ico',
-        loadingGif: 'resources/loading.gif',
-        certificateFile: 'resources/certificate.pfx',
-        certificatePassword: process.env.CERTIFICATE_WIN_PASSWORD,
-        //remoteReleases: 'https://github.com/CoinSpace/CoinSpace',
-      },
-    },
-    BUILD_PLATFORM === 'appx' && {
+    VITE_DISTRIBUTION === 'appx' && {
       name: '@electron-forge/maker-appx',
       config: {
-        packageName: 'CoinWallet',
+        packageName: appxPackageName,
+        packageVersion: appxVersion,
         identityName: process.env.APPX_IDENTITY,
         publisher: process.env.APPX_PUBLISHER,
         assets: 'resources/appx',
@@ -131,14 +144,15 @@ module.exports = {
         makePri: true,
       },
     },
-    BUILD_PLATFORM === 'appx-dev' && {
+    VITE_DISTRIBUTION === 'appx-dev' && {
       name: '@electron-forge/maker-appx',
       config: {
-        packageName: 'CoinWalletDev',
+        packageName: appxPackageName,
+        packageVersion: appxVersion,
         identityName: pkg.name,
         publisher: process.env.APPX_PUBLISHER_DEV,
         devCert: 'resources/certificate.pfx',
-        certPass: process.env.CERTIFICATE_WIN_PASSWORD,
+        certPass: process.env.CERTIFICATE_SELFSIGN_WIN_PASSWORD,
         assets: 'resources/appx',
         manifest: 'resources/appxmanifest.xml',
         makePri: true,
@@ -182,21 +196,23 @@ module.exports = {
       },
     },
     {
-      name: '@mahnunchik/maker-pkg',
+      name: '@electron-forge/maker-pkg',
       platforms: [
         'mas',
       ],
       config: {
-        name: `${pkg.productName}-${pkg.version}${BUILD_PLATFORM === 'mas-dev' ? '-dev': ''}.pkg`,
+        name: `${pkg.productName}-${pkg.version}${VITE_DISTRIBUTION === 'mas-dev' ? '-dev': ''}`,
       },
     },
     {
-      name: './support/snap',
+      name: './support/snap.cjs',
       config: {
         linux: {
           icon: 'resources/icon.icns',
+          executableName: pkg.executableName,
         },
         snap: {
+          artifactName: `${pkg.executableName}-${pkg.version}.snap`,
           summary: pkg.description,
           category: 'Office;Finance',
           publish: {
@@ -205,31 +221,30 @@ module.exports = {
           },
           plugs: ['default', 'u2f-devices'],
         },
-        protocols: {
-          name: 'Coin Wallet',
-          schemes,
-        },
+        protocols,
         publish: BRANCH === 'master' ? 'always' : 'never',
       },
     },
   ].filter(item => !!item),
   publishers: [
-    ['mac', 'win'].includes(BUILD_PLATFORM) && BRANCH === 'master' && {
-      name: '@mahnunchik/publisher-github',
+    ['mac'].includes(VITE_DISTRIBUTION) && BRANCH === 'master' && {
+      name: '@electron-forge/publisher-github',
       config: {
         repository: {
           owner: 'CoinSpace',
           name: 'CoinSpace',
         },
         draft: true,
-        override: true,
+        force: true,
       },
     },
     {
-      name: '@mahnunchik/publisher-gcs',
+      name: '@electron-forge/publisher-gcs',
       config: {
         bucket: process.env.GOOGLE_CLOUD_BUCKET,
-        folder: `${pkg.version}-${BRANCH || 'local'}`,
+        keyResolver(fileName/*, platform, arch*/) {
+          return `${pkg.version}-${BRANCH || 'local'}/${fileName}`;
+        },
         public: false,
       },
     },

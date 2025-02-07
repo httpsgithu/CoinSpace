@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/github/license/CoinSpace/CoinSpace?color=blue)](https://github.com/CoinSpace/CoinSpace/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/CoinAppWallet?style=social)](https://twitter.com/intent/follow?screen_name=CoinAppWallet)
 
-Coin Wallet is a non-custodial multicurrency wallet for multiple platforms.
+Coin Wallet is a self-custodial multicurrency wallet for multiple platforms.
 
 Supported platforms:
 - Web
@@ -18,15 +18,27 @@ Supported platforms:
 - Tor
 
 Supported coins:
-- Bitcoin
-- Bitcoin Cash
-- Bitcoin SV
-- Ethereum and ERC20 tokens
-- Litecoin
-- Ripple
-- Stellar
-- EOS
-- Dogecoin
-- Dash
-- Monero
-- Binance Smart Chain and BEP20 tokens
+- Arbitrum One (ARB) and Arbitrum tokens
+- Avalanche C-Chain (AVAX) and ARC20 tokens
+- Binance Smart Chain (BNB) and BEP20 tokens
+- Bitcoin (BTC)
+- Bitcoin Cash (BCH)
+- Cardano (ADA)
+- Dash (DASH)
+- Dogecoin (DOGE)
+- EOS (EOS)
+- Ethereum (ETH) and ERC20 tokens
+- Ethereum Classic (ETC)
+- Fantom (FTM) and Fantom tokens
+- Litecoin (LTC)
+- Monero (XMR)
+- Optimism (OP) and Optimism tokens
+- Polygon (POL) and Polygon tokens
+- Solana (SOL) and SPL tokens
+- Stellar (XLM)
+- Sui (SUI)
+- TRON (TRX) and TRC20 tokens
+- Toncoin (TON) and Jettons
+- XRP (XRP)
+
+This project is tested with BrowserStack

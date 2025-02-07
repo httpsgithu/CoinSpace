@@ -1,7 +1,7 @@
-import db from './db.js';
-import semver from 'semver';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
+import db from './db.js';
+import semver from 'semver';
 
 const github = axios.create({
   timeout: 30000,
@@ -34,7 +34,7 @@ const platforms = [{
   app: 'app',
   type: TYPE_LINK,
   pattern: /coinspacezp5mmyuicbz2hoafbnduj4vzkttq3grn5mnwdue5t343zid\.onion/ig,
-  link: 'http://coinspacezp5mmyuicbz2hoafbnduj4vzkttq3grn5mnwdue5t343zid.onion/',
+  link: 'https://coinspacezp5mmyuicbz2hoafbnduj4vzkttq3grn5mnwdue5t343zid.onion/',
 }, {
   // Windows application, update from app
   distribution: 'win',
@@ -65,29 +65,36 @@ const platforms = [{
   type: TYPE_FILE,
   pattern: /\.dmg$/i,
 }, {
+  // macOS application, update from app (wrong arch)
+  distribution: 'mac',
+  arch: 'any',
+  app: 'app',
+  type: TYPE_FILE,
+  pattern: /\.dmg$/i,
+}, {
   // Mac App Store application
   distribution: 'mas',
   arch: 'any',
   app: 'app',
   type: TYPE_LINK,
-  pattern: /id980719434\/?#\?platform=mac/ig,
-  link: 'https://apps.apple.com/us/app/coin-bitcoin-wallet/id980719434',
+  pattern: /id980719434\?platform=mac/ig,
+  link: 'https://apps.apple.com/app/coin-wallet-bitcoin-crypto/id980719434',
 }, {
   // Windows / Microsoft Store application
   distribution: 'appx',
   arch: 'any',
   app: 'app',
   type: TYPE_LINK,
-  pattern: /apps\/9NBLGGH5PXJQ/ig,
-  link: 'https://www.microsoft.com/store/apps/9NBLGGH5PXJQ',
+  pattern: /9NBLGGH5PXJQ/ig,
+  link: 'https://apps.microsoft.com/store/detail/9NBLGGH5PXJQ',
 }, {
   // Common for iPhone, iPad, and Apple Watch
   distribution: 'ios',
   arch: 'any',
   app: 'app',
   type: TYPE_LINK,
-  pattern: /id980719434\/?#\?platform=(iphone|ipad|appleWatch)/ig,
-  link: 'https://apps.apple.com/us/app/coin-bitcoin-wallet/id980719434',
+  pattern: /id980719434\?platform=(iphone|ipad|appleWatch)/ig,
+  link: 'https://apps.apple.com/app/coin-wallet-bitcoin-crypto/id980719434',
 }, {
   // Android Play app (deprecated)
   distribution: 'android',
@@ -112,6 +119,29 @@ const platforms = [{
   type: TYPE_LINK,
   pattern: /galaxy\.store\/coinapp/ig,
   link: 'https://galaxy.store/coinapp',
+}, {
+  // Android AppGallery app
+  distribution: 'android-huawei',
+  arch: 'any',
+  app: 'app',
+  type: TYPE_LINK,
+  pattern: /appgallery\.huawei\.com\/app\/C112183767/ig,
+  link: 'https://appgallery.huawei.com/app/C112183767',
+}, {
+  // Android Uptodown app
+  distribution: 'android-uptodown',
+  arch: 'any',
+  app: 'app',
+  type: TYPE_LINK,
+  pattern: /coin-wallet\.en\.uptodown\.com\/android/ig,
+  link: 'https://coin-wallet.en.uptodown.com/android',
+}, {
+  // Android APK app
+  distribution: 'android-apk',
+  arch: 'any',
+  app: 'app',
+  type: TYPE_FILE,
+  pattern: /\.apk$/i,
 }, {
   // Linux snap
   distribution: 'snap',
@@ -212,7 +242,7 @@ async function getLatest() {
           }
         }
       } else if (platform.type === TYPE_LINK) {
-        if (release.body.search(platform.pattern) !== -1) {
+        if (release.body.replace(/<!--.+-->/ig, '').search(platform.pattern) !== -1) {
           latest[platform.key] = {
             distribution: platform.distribution,
             arch: platform.arch,

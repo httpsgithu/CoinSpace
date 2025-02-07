@@ -1,8 +1,6 @@
 import axios from 'axios';
 import db from '../db.js';
 
-const API_KEY = process.env.MOONPAY_API_KEY;
-
 function save(_id, data) {
   const collection = db.collection('moonpay');
   return collection.updateOne({ _id }, { $set: { data } }, { upsert: true });
@@ -31,11 +29,7 @@ function detectNetwork(item) {
 }
 
 function getCurrenciesFromAPI() {
-  return axios.get('https://api.moonpay.com/v3/currencies', {
-    params: {
-      apiKey: API_KEY,
-    },
-  }).then((response) => {
+  return axios.get('https://api.moonpay.com/v3/currencies').then((response) => {
     const { data } = response;
     if (!data || !data.length) throw new Error('Bad moonpay response');
 
@@ -49,14 +43,14 @@ function getCurrenciesFromAPI() {
           code: coin.code,
           symbol,
           isSupported: !coin.isSuspended,
-          isSellSupported: coin.isSellSupported && process.env.ENABLE_MOONPAY_SELL === 'true',
+          isSellSupported: coin.isSellSupported,
           network,
         };
         coinsUSA[coin.id] = {
           code: coin.code,
           symbol,
           isSupported: !coin.isSuspended && coin.isSupportedInUS,
-          isSellSupported: coin.isSellSupported && process.env.ENABLE_MOONPAY_SELL === 'true',
+          isSellSupported: coin.isSellSupported,
           network,
         };
       }

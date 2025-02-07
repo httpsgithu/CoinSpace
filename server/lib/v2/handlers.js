@@ -1,12 +1,12 @@
 import createError from 'http-errors';
-import wallets from '../wallets.js';
-import storage from '../storage.js';
+import csFee from '../csFee.js';
+import fee from '../fee.js';
 import mecto from '../mecto.js';
 import moonpay from '../moonpay.js';
+import storage from '../storage.js';
 import tokens from '../tokens.js';
-import fee from '../fee.js';
-import csFee from '../csFee.js';
 import { verifyReq } from '../utils.js';
+import wallets from '../v3/wallets.js';
 
 export async function register(req, res) {
   await verifyReq(req.body.walletId, req);
@@ -18,31 +18,31 @@ export async function register(req, res) {
 // Public
 
 export async function tokenPublicPinVerify(req, res) {
-  await wallets.pinVerify(req.device, req.body.pinHash, 'public');
+  await wallets.pinVerify(req.device, req.body.pinHash, 'device');
   return res.status(200).send({
-    publicToken: req.device.public_token,
+    publicToken: req.device.device_token,
   });
 }
 
 export async function tokenPublicPlatformOptions(req, res) {
-  const options = await wallets.platformOptions(req.device, 'public');
+  const options = await wallets.platformOptions(req.device, 'device');
   return res.status(200).send(options);
 }
 
 export async function tokenPublicPlatformVerify(req, res) {
-  await wallets.platformVerify(req.device, req.body, 'public');
+  await wallets.platformVerify(req.device, req.body, 'device');
   return res.status(200).send({
-    publicToken: req.device.public_token,
+    publicToken: req.device.device_token,
   });
 }
 
 // Private
 
 export async function tokenPrivate(req, res) {
-  if (req.device.wallet.settings['1fa_private'] === false) {
+  if (req.device.wallet.settings['1fa_wallet'] === false) {
     if (req.device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: req.device.private_token,
+        privateToken: req.device.wallet_token,
       });
     }
   }
@@ -51,14 +51,14 @@ export async function tokenPrivate(req, res) {
 }
 
 export async function tokenPrivatePinVerify(req, res) {
-  if (req.device.wallet.settings['1fa_private'] !== false) {
-    await wallets.pinVerify(req.device, req.body.pinHash, 'private');
+  if (req.device.wallet.settings['1fa_wallet'] !== false) {
+    await wallets.pinVerify(req.device, req.body.pinHash, 'wallet');
     if (req.device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: req.device.private_token,
+        privateToken: req.device.wallet_token,
       });
     } else {
-      const options = await wallets.crossplatformOptions(req.device, 'private');
+      const options = await wallets.crossplatformOptions(req.device, 'wallet');
       return res.status(200).send(options);
     }
   }
@@ -67,8 +67,8 @@ export async function tokenPrivatePinVerify(req, res) {
 }
 
 export async function tokenPrivatePlatformOptions(req, res) {
-  if (req.device.wallet.settings['1fa_private'] !== false) {
-    const options = await wallets.platformOptions(req.device, 'private');
+  if (req.device.wallet.settings['1fa_wallet'] !== false) {
+    const options = await wallets.platformOptions(req.device, 'wallet');
     return res.status(200).send(options);
   }
 
@@ -76,14 +76,14 @@ export async function tokenPrivatePlatformOptions(req, res) {
 }
 
 export async function tokenPrivatePlatformVerify(req, res) {
-  if (req.device.wallet.settings['1fa_private'] !== false) {
-    await wallets.platformVerify(req.device, req.body, 'private');
+  if (req.device.wallet.settings['1fa_wallet'] !== false) {
+    await wallets.platformVerify(req.device, req.body, 'wallet');
     if (req.device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: req.device.private_token,
+        privateToken: req.device.wallet_token,
       });
     } else {
-      const options = await wallets.crossplatformOptions(req.device, 'private');
+      const options = await wallets.crossplatformOptions(req.device, 'wallet');
       return res.status(200).send(options);
     }
   }
@@ -92,8 +92,8 @@ export async function tokenPrivatePlatformVerify(req, res) {
 }
 
 export async function tokenPrivateCrossplatformOptions(req, res) {
-  if (req.device.wallet.settings['1fa_private'] === false) {
-    const options = await wallets.crossplatformOptions(req.device, 'private');
+  if (req.device.wallet.settings['1fa_wallet'] === false) {
+    const options = await wallets.crossplatformOptions(req.device, 'wallet');
     return res.status(200).send(options);
   }
 
@@ -101,9 +101,9 @@ export async function tokenPrivateCrossplatformOptions(req, res) {
 }
 
 export async function tokenPrivateCrossplatformVerify(req, res) {
-  await wallets.crossplatformVerify(req.device, req.body, 'private');
+  await wallets.crossplatformVerify(req.device, req.body, 'wallet');
   return res.status(200).send({
-    privateToken: req.device.private_token,
+    privateToken: req.device.wallet_token,
   });
 }
 
@@ -148,7 +148,7 @@ export async function removeCrossplatformAuthenticator(req, res) {
 
 export async function getSettings(req, res) {
   res.status(200).send({
-    '1faPrivate': req.device.wallet.settings['1fa_private'],
+    '1faPrivate': req.device.wallet.settings['1fa_wallet'],
     hasAuthenticators: req.device.wallet.authenticators.length !== 0,
   });
 }
@@ -156,11 +156,11 @@ export async function getSettings(req, res) {
 export async function setSettings(req, res) {
   const data = {};
   if ('1faPrivate' in req.body) {
-    data['1fa_private'] = req.body['1faPrivate'];
+    data['1fa_wallet'] = req.body['1faPrivate'];
   }
   const settings = await wallets.setSettings(req.device, data);
   res.status(200).send({
-    '1faPrivate': settings['1fa_private'],
+    '1faPrivate': settings['1fa_wallet'],
     hasAuthenticators: req.device.wallet.authenticators.length !== 0,
   });
 }
@@ -177,12 +177,12 @@ export async function setDetails(req, res) {
 }
 
 export async function getStorage(req, res) {
-  const data = await storage.getStorage(req.device, req.params.storageName);
+  const data = await storage.getStorage(req.device, storage.fixStorageName(req.params.storageName));
   res.status(200).send({ data });
 }
 
 export async function setStorage(req, res) {
-  const data = await storage.setStorage(req.device, req.params.storageName, req.body.data);
+  const data = await storage.setStorage(req.device, storage.fixStorageName(req.params.storageName), req.body.data);
   res.status(200).send({ data });
 }
 

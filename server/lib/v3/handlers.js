@@ -1,17 +1,18 @@
+import changelly from '../exchanges/changelly.js';
 import createError from 'http-errors';
-import semver from 'semver';
-import wallets from '../wallets.js';
 import cryptos from '../cryptos.js';
-import fee from '../fee.js';
 import csFee from '../csFee.js';
+import domain from '../domain.js';
+import fee from '../fee.js';
+import github from '../github.js';
 import mecto from '../mecto.js';
-import storage from '../storage.js';
 import moonpay from '../moonpay.js';
 import openalias from '../openalias.js';
-import domain from '../domain.js';
-import github from '../github.js';
-import changelly from '../changelly.js';
+import ramps from './ramps/index.js';
+import semver from 'semver';
+import storage from '../storage.js';
 import { verifyReq } from '../utils.js';
+import wallets from './wallets.js';
 
 export async function register(req, res) {
   await verifyReq(req.body.walletId, req);
@@ -20,27 +21,33 @@ export async function register(req, res) {
   res.status(201).send(info);
 }
 
+export async function logoutOthers(req, res) {
+  const device = await req.getDevice();
+  await wallets.logoutOthers(device);
+  res.status(200).send({ success: true });
+}
+
 // Public
 
 export async function tokenPublicPinVerify(req, res) {
   const device = await req.getDevice();
-  await wallets.pinVerify(device, req.body.pinHash, 'public');
+  await wallets.pinVerify(device, req.body.pinHash, 'device');
   return res.status(200).send({
-    publicToken: device.public_token,
+    publicToken: device.device_token,
   });
 }
 
 export async function tokenPublicPlatformOptions(req, res) {
   const device = await req.getDevice();
-  const options = await wallets.platformOptions(device, 'public');
+  const options = await wallets.platformOptions(device, 'device');
   return res.status(200).send(options);
 }
 
 export async function tokenPublicPlatformVerify(req, res) {
   const device = await req.getDevice();
-  await wallets.platformVerify(device, req.body, 'public');
+  await wallets.platformVerify(device, req.body, 'device');
   return res.status(200).send({
-    publicToken: device.public_token,
+    publicToken: device.device_token,
   });
 }
 
@@ -48,10 +55,10 @@ export async function tokenPublicPlatformVerify(req, res) {
 
 export async function tokenPrivate(req, res) {
   const device = await req.getDevice();
-  if (device.wallet.settings['1fa_private'] === false) {
+  if (device.wallet.settings['1fa_wallet'] === false) {
     if (device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: device.private_token,
+        privateToken: device.wallet_token,
       });
     }
   }
@@ -61,14 +68,14 @@ export async function tokenPrivate(req, res) {
 
 export async function tokenPrivatePinVerify(req, res) {
   const device = await req.getDevice();
-  if (device.wallet.settings['1fa_private'] !== false) {
-    await wallets.pinVerify(device, req.body.pinHash, 'private');
+  if (device.wallet.settings['1fa_wallet'] !== false) {
+    await wallets.pinVerify(device, req.body.pinHash, 'wallet');
     if (device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: device.private_token,
+        privateToken: device.wallet_token,
       });
     } else {
-      const options = await wallets.crossplatformOptions(device, 'private');
+      const options = await wallets.crossplatformOptions(device, 'wallet');
       return res.status(200).send(options);
     }
   }
@@ -78,8 +85,8 @@ export async function tokenPrivatePinVerify(req, res) {
 
 export async function tokenPrivatePlatformOptions(req, res) {
   const device = await req.getDevice();
-  if (device.wallet.settings['1fa_private'] !== false) {
-    const options = await wallets.platformOptions(device, 'private');
+  if (device.wallet.settings['1fa_wallet'] !== false) {
+    const options = await wallets.platformOptions(device, 'wallet');
     return res.status(200).send(options);
   }
 
@@ -88,14 +95,14 @@ export async function tokenPrivatePlatformOptions(req, res) {
 
 export async function tokenPrivatePlatformVerify(req, res) {
   const device = await req.getDevice();
-  if (device.wallet.settings['1fa_private'] !== false) {
-    await wallets.platformVerify(device, req.body, 'private');
+  if (device.wallet.settings['1fa_wallet'] !== false) {
+    await wallets.platformVerify(device, req.body, 'wallet');
     if (device.wallet.authenticators.length === 0) {
       return res.status(200).send({
-        privateToken: device.private_token,
+        privateToken: device.wallet_token,
       });
     } else {
-      const options = await wallets.crossplatformOptions(device, 'private');
+      const options = await wallets.crossplatformOptions(device, 'wallet');
       return res.status(200).send(options);
     }
   }
@@ -105,8 +112,8 @@ export async function tokenPrivatePlatformVerify(req, res) {
 
 export async function tokenPrivateCrossplatformOptions(req, res) {
   const device = await req.getDevice();
-  if (device.wallet.settings['1fa_private'] === false) {
-    const options = await wallets.crossplatformOptions(device, 'private');
+  if (device.wallet.settings['1fa_wallet'] === false) {
+    const options = await wallets.crossplatformOptions(device, 'wallet');
     return res.status(200).send(options);
   }
 
@@ -115,9 +122,9 @@ export async function tokenPrivateCrossplatformOptions(req, res) {
 
 export async function tokenPrivateCrossplatformVerify(req, res) {
   const device = await req.getDevice();
-  await wallets.crossplatformVerify(device, req.body, 'private');
+  await wallets.crossplatformVerify(device, req.body, 'wallet');
   return res.status(200).send({
-    privateToken: device.private_token,
+    privateToken: device.wallet_token,
   });
 }
 
@@ -170,7 +177,7 @@ export async function removeCrossplatformAuthenticator(req, res) {
 export async function getSettings(req, res) {
   const device = await req.getDevice();
   res.status(200).send({
-    '1faPrivate': device.wallet.settings['1fa_private'],
+    '1faPrivate': device.wallet.settings['1fa_wallet'],
     hasAuthenticators: device.wallet.authenticators.length !== 0,
   });
 }
@@ -179,11 +186,11 @@ export async function setSettings(req, res) {
   const device = await req.getDevice();
   const data = {};
   if ('1faPrivate' in req.body) {
-    data['1fa_private'] = req.body['1faPrivate'];
+    data['1fa_wallet'] = req.body['1faPrivate'];
   }
   const settings = await wallets.setSettings(device, data);
   res.status(200).send({
-    '1faPrivate': settings['1fa_private'],
+    '1faPrivate': settings['1fa_wallet'],
     hasAuthenticators: device.wallet.authenticators.length !== 0,
   });
 }
@@ -272,13 +279,13 @@ export async function removeMecto(req, res) {
 
 export async function getStorage(req, res) {
   const device = await req.getDevice();
-  const data = await storage.getStorage(device, req.params.storageName);
+  const data = await storage.getStorage(device, storage.fixStorageName(req.params.storageName));
   res.status(200).send({ data });
 }
 
 export async function setStorage(req, res) {
   const device = await req.getDevice();
-  const data = await storage.setStorage(device, req.params.storageName, req.body.data);
+  const data = await storage.setStorage(device, storage.fixStorageName(req.params.storageName), req.body.data);
   res.status(200).send({ data });
 }
 
@@ -357,22 +364,22 @@ export async function getDomainAddress(req, res) {
 }
 
 export async function changellyParams(req, res) {
-  const data = await changelly.getPairsParams(req.query.from, req.query.to);
+  const data = await changelly.getPairsParamsV3(req.query.from, req.query.to);
   res.status(200).send(data);
 }
 
 export async function changellyEstimate(req, res) {
-  const data = await changelly.estimate(req.query.from, req.query.to, req.query.amount);
+  const data = await changelly.estimateV3(req.query.from, req.query.to, req.query.amount);
   res.status(200).send(data);
 }
 
 export async function changellyValidateAddress(req, res) {
-  const data = await changelly.validateAddress(req.query.address, req.query.crypto);
+  const data = await changelly.validateAddressV3(req.query.address, req.query.crypto);
   res.status(200).send(data);
 }
 
 export async function changellyCreateTransaction(req, res) {
-  const data = await changelly.createTransaction(
+  const data = await changelly.createTransactionV3(
     req.body.from,
     req.body.to,
     req.body.amount,
@@ -383,12 +390,12 @@ export async function changellyCreateTransaction(req, res) {
 }
 
 export async function changellyGetTransaction(req, res) {
-  const data = await changelly.getTransaction(req.params.transactionId);
+  const data = await changelly.getTransactionV3(req.params.transactionId);
   res.status(200).send(data);
 }
 
 export async function changellyGetTransactions(req, res) {
-  const data = await changelly.getTransactions(
+  const data = await changelly.getTransactionsV3(
     req.query.transaction,
     req.query.currency,
     req.query.address,
@@ -396,4 +403,24 @@ export async function changellyGetTransactions(req, res) {
     req.query.offset
   );
   res.status(200).send(data);
+}
+
+export async function getRamps(req, res) {
+  const data = await ramps.getRamps(
+    req.query.countryCode,
+    req.query.crypto,
+    req.query.address
+  );
+  res.status(200).send(data);
+}
+
+export async function getBtcDirectBuyWidget(req, res) {
+  const envSuffix = `${process.env.NODE_ENV === 'production' ? '' : '-sandbox'}`;
+  res.render('btcdirectBuy', {
+    apiKey: process.env.BTCDIRECT_API_KEY,
+    envSuffix,
+    address: req.query.address,
+    baseCurrency: req.query.baseCurrency,
+    fiatAmount: 300,
+  });
 }

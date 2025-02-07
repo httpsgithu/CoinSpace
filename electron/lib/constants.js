@@ -1,10 +1,11 @@
-'use strict';
-
-module.exports = {
-  isMac: process.platform === 'darwin',
-  isLinux: process.platform === 'linux',
-  isWindows: process.platform === 'win32',
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isMas: process.mas === true,
-  isWindowsStore: process.windowsStore === true,
-};
+import * as variables from '../dist/variables.js';
+process.env.GOOGLE_API_KEY = variables.VITE_GOOGLE_API_KEY;
+const mode = process.env.NODE_ENV || variables.MODE;
+export const isMac = process.platform === 'darwin';
+export const isLinux = process.platform === 'linux';
+export const isWindows = process.platform === 'win32';
+export const isDevelopment = mode === 'development';
+export const isMas = process.mas === true;
+export const isWindowsStore = process.windowsStore === true;
+export const APP_HOSTNAME = new URL(variables.VITE_SITE_URL).hostname;
+export * from '../dist/variables.js';

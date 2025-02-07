@@ -1,5 +1,0 @@
-<div class="js-modal overlay overlay--flash">
-  <div class="js-container overlay__container" on-click="cancel" on-escape="cancel" tabindex="-1">
-    {{>content}}
-  </div>
-</div>
